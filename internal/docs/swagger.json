@@ -1,0 +1,307 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "Spring Slumber 后端 REST 接口文档（手机号 + 短信验证码登录）",
+        "title": "Spring Slumber API",
+        "contact": {},
+        "version": "dev"
+    },
+    "basePath": "/",
+    "paths": {
+        "/api/v1/overview": {
+            "get": {
+                "description": "返回当前服务名、运行环境、欢迎语与服务器时间，用于连通性自检。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "服务概览",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.OverviewResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user/login": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "校验通过后返回 JWT（HS256，默认 2 小时有效）。用户不存在时自动注册。\n连续错误次数超阈值会触发账号临时锁定（默认 10 分钟）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "手机号 + 验证码登录",
+                "parameters": [
+                    {
+                        "description": "登录凭据",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_app_user_handler.loginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_app_user_handler.loginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "参数无效 / 验证码过期（invalid_argument | code_expired）",
+                        "schema": {
+                            "$ref": "#/definitions/spring-slumber-server_internal_response.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "账号被锁定（account_locked）",
+                        "schema": {
+                            "$ref": "#/definitions/spring-slumber-server_internal_response.Error"
+                        }
+                    },
+                    "429": {
+                        "description": "登录过于频繁（rate_limited）",
+                        "schema": {
+                            "$ref": "#/definitions/spring-slumber-server_internal_response.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "服务异常",
+                        "schema": {
+                            "$ref": "#/definitions/spring-slumber-server_internal_response.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user/send-code": {
+            "post": {
+                "description": "向指定手机号下发 6 位数字验证码。同 IP / 同手机号默认 1 分钟内只能请求 1 次。\n验证码以 SHA256 摘要落库，明文不入库。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "发送短信验证码",
+                "parameters": [
+                    {
+                        "description": "手机号",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_app_user_handler.sendCodeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_app_user_handler.sendCodeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "参数无效（invalid_argument）",
+                        "schema": {
+                            "$ref": "#/definitions/spring-slumber-server_internal_response.Error"
+                        }
+                    },
+                    "429": {
+                        "description": "发送过于频繁（rate_limited）",
+                        "schema": {
+                            "$ref": "#/definitions/spring-slumber-server_internal_response.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "服务异常",
+                        "schema": {
+                            "$ref": "#/definitions/spring-slumber-server_internal_response.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/healthz": {
+            "get": {
+                "description": "进程存活探针；不依赖任何外部依赖（DB / 短信网关等）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "健康检查（liveness）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.HealthResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/readyz": {
+            "get": {
+                "description": "就绪探针；当前实现等同于 liveness，预留用于后续接入 DB 健康检查。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "健康检查（readiness）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.HealthResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "internal_app_user_handler.loginRequest": {
+            "type": "object",
+            "required": [
+                "phoneNumber",
+                "verificationCode"
+            ],
+            "properties": {
+                "phoneNumber": {
+                    "type": "string",
+                    "example": "13800138000"
+                },
+                "verificationCode": {
+                    "type": "string",
+                    "example": "123456"
+                }
+            }
+        },
+        "internal_app_user_handler.loginResponse": {
+            "type": "object",
+            "properties": {
+                "phoneNumber": {
+                    "type": "string",
+                    "example": "13800138000"
+                },
+                "token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIs..."
+                },
+                "uid": {
+                    "type": "integer",
+                    "example": 10001
+                }
+            }
+        },
+        "internal_app_user_handler.sendCodeRequest": {
+            "type": "object",
+            "required": [
+                "phoneNumber"
+            ],
+            "properties": {
+                "phoneNumber": {
+                    "type": "string",
+                    "example": "13800138000"
+                }
+            }
+        },
+        "internal_app_user_handler.sendCodeResponse": {
+            "type": "object",
+            "properties": {
+                "expireSeconds": {
+                    "type": "integer",
+                    "example": 300
+                }
+            }
+        },
+        "internal_handler.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "service": {
+                    "type": "string",
+                    "example": "spring-slumber-server"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "ok"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string",
+                    "example": "dev"
+                }
+            }
+        },
+        "internal_handler.OverviewResponse": {
+            "type": "object",
+            "properties": {
+                "environment": {
+                    "type": "string",
+                    "example": "development"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Spring Slumber API is running."
+                },
+                "service": {
+                    "type": "string",
+                    "example": "spring-slumber-server"
+                },
+                "timestamp": {
+                    "type": "string"
+                }
+            }
+        },
+        "spring-slumber-server_internal_response.Error": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "形如 `Bearer \u003cjwt\u003e`，由 POST /api/v1/user/login 返回。",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

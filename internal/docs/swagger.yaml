@@ -1,0 +1,208 @@
+basePath: /
+definitions:
+  internal_app_user_handler.loginRequest:
+    properties:
+      phoneNumber:
+        example: "13800138000"
+        type: string
+      verificationCode:
+        example: "123456"
+        type: string
+    required:
+    - phoneNumber
+    - verificationCode
+    type: object
+  internal_app_user_handler.loginResponse:
+    properties:
+      phoneNumber:
+        example: "13800138000"
+        type: string
+      token:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+      uid:
+        example: 10001
+        type: integer
+    type: object
+  internal_app_user_handler.sendCodeRequest:
+    properties:
+      phoneNumber:
+        example: "13800138000"
+        type: string
+    required:
+    - phoneNumber
+    type: object
+  internal_app_user_handler.sendCodeResponse:
+    properties:
+      expireSeconds:
+        example: 300
+        type: integer
+    type: object
+  internal_handler.HealthResponse:
+    properties:
+      service:
+        example: spring-slumber-server
+        type: string
+      status:
+        example: ok
+        type: string
+      timestamp:
+        type: string
+      version:
+        example: dev
+        type: string
+    type: object
+  internal_handler.OverviewResponse:
+    properties:
+      environment:
+        example: development
+        type: string
+      message:
+        example: Spring Slumber API is running.
+        type: string
+      service:
+        example: spring-slumber-server
+        type: string
+      timestamp:
+        type: string
+    type: object
+  spring-slumber-server_internal_response.Error:
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Spring Slumber 后端 REST 接口文档（手机号 + 短信验证码登录）
+  title: Spring Slumber API
+  version: dev
+paths:
+  /api/v1/overview:
+    get:
+      description: 返回当前服务名、运行环境、欢迎语与服务器时间，用于连通性自检。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler.OverviewResponse'
+      summary: 服务概览
+      tags:
+      - system
+  /api/v1/user/login:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        校验通过后返回 JWT（HS256，默认 2 小时有效）。用户不存在时自动注册。
+        连续错误次数超阈值会触发账号临时锁定（默认 10 分钟）。
+      parameters:
+      - description: 登录凭据
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_app_user_handler.loginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_app_user_handler.loginResponse'
+        "400":
+          description: 参数无效 / 验证码过期（invalid_argument | code_expired）
+          schema:
+            $ref: '#/definitions/spring-slumber-server_internal_response.Error'
+        "403":
+          description: 账号被锁定（account_locked）
+          schema:
+            $ref: '#/definitions/spring-slumber-server_internal_response.Error'
+        "429":
+          description: 登录过于频繁（rate_limited）
+          schema:
+            $ref: '#/definitions/spring-slumber-server_internal_response.Error'
+        "500":
+          description: 服务异常
+          schema:
+            $ref: '#/definitions/spring-slumber-server_internal_response.Error'
+      security:
+      - BearerAuth: []
+      summary: 手机号 + 验证码登录
+      tags:
+      - user
+  /api/v1/user/send-code:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        向指定手机号下发 6 位数字验证码。同 IP / 同手机号默认 1 分钟内只能请求 1 次。
+        验证码以 SHA256 摘要落库，明文不入库。
+      parameters:
+      - description: 手机号
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_app_user_handler.sendCodeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_app_user_handler.sendCodeResponse'
+        "400":
+          description: 参数无效（invalid_argument）
+          schema:
+            $ref: '#/definitions/spring-slumber-server_internal_response.Error'
+        "429":
+          description: 发送过于频繁（rate_limited）
+          schema:
+            $ref: '#/definitions/spring-slumber-server_internal_response.Error'
+        "500":
+          description: 服务异常
+          schema:
+            $ref: '#/definitions/spring-slumber-server_internal_response.Error'
+      summary: 发送短信验证码
+      tags:
+      - user
+  /healthz:
+    get:
+      description: 进程存活探针；不依赖任何外部依赖（DB / 短信网关等）。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler.HealthResponse'
+      summary: 健康检查（liveness）
+      tags:
+      - system
+  /readyz:
+    get:
+      description: 就绪探针；当前实现等同于 liveness，预留用于后续接入 DB 健康检查。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler.HealthResponse'
+      summary: 健康检查（readiness）
+      tags:
+      - system
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: 形如 `Bearer <jwt>`，由 POST /api/v1/user/login 返回。
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
