@@ -23,8 +23,8 @@ import (
 
 	"gorm.io/gorm"
 
-	"spring-slumber-server/internal/app/user/dao"
-	"spring-slumber-server/internal/app/user/model"
+	"spring-slumber-server/internal/app/admin-user/dao"
+	"spring-slumber-server/internal/app/admin-user/model"
 	"spring-slumber-server/internal/auth"
 	"spring-slumber-server/internal/config"
 	"spring-slumber-server/internal/service/ratelimit"
@@ -96,6 +96,7 @@ func (s *Service) SendCode(ctx context.Context, phone, ip string) (*SendCodeResu
 	}
 
 	code := generateCode(6)
+	fmt.Printf("验证码 %s", code)
 	hash := hashCode(phone, code, s.authCfg.CodeSalt)
 
 	vc := &model.VerificationCode{

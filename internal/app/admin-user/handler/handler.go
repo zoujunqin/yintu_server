@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"spring-slumber-server/internal/app/user/service"
+	"spring-slumber-server/internal/app/admin-user/service"
 	"spring-slumber-server/internal/response"
 )
 
@@ -133,4 +133,26 @@ func clientIP(c *gin.Context) string {
 		return v
 	}
 	return c.Request.RemoteAddr
+}
+
+// mobilePingResponse 移动端 ping 响应。
+type mobilePingResponse struct {
+	Platform string `json:"platform" example:"mobile"`
+	Pong     bool   `json:"pong"     example:"true"`
+}
+
+// MobilePing 移动端连通性探测：仅挂载在 /api/v1/mobile/* 子组下。
+//
+// @Summary      移动端连通性探测
+// @Description  返回当前请求所属客户端平台标记，用于验证 v1/mobile 子组中间件链是否生效。
+// @Tags         user
+// @Produce      json
+// @Success      200 {object} mobilePingResponse
+// @Router       /api/v1/mobile/user/ping [get]
+func (h *Handler) MobilePing(c *gin.Context) {
+	platform := c.GetString("client_platform")
+	if platform == "" {
+		platform = "unknown"
+	}
+	response.JSON(c, http.StatusOK, mobilePingResponse{Platform: platform, Pong: true})
 }

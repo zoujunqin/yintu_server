@@ -161,3 +161,24 @@ func newRequestID() string {
 	}
 	return hex.EncodeToString(bytes[:])
 }
+
+// ClientPlatformKey 是客户端平台标识在 *gin.Context 中的键名。
+const ClientPlatformKey = "client_platform"
+
+// ClientMarker 给请求打「客户端平台」标记，便于下游 handler 差异化处理。
+//
+// 用法：在 router.go 给不同客户端子组挂不同的 platform 字符串：
+//
+//	mobile := v1.Group("/mobile",    ClientMarker("mobile"))
+//	admin  := v1.Group("/pc-admin",  ClientMarker("pc-admin"))
+//	pcUser := v1.Group("/pc-user",   ClientMarker("pc-user"))
+//
+// handler 内通过 c.GetString(ClientPlatformKey) 读取。
+//
+// 注意：本中间件**不做鉴权**，仅打标；真正的鉴权 / 限流请放在它之前或另起中间件。
+func ClientMarker(platform string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set(ClientPlatformKey, platform)
+		c.Next()
+	}
+}

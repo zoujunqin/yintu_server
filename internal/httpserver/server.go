@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"spring-slumber-server/internal/config"
+	"spring-slumber-server/internal/security"
 )
 
 // Server HTTP 服务封装。
@@ -29,6 +30,19 @@ func New(cfg config.Config, logger *slog.Logger, deps Deps) *Server {
 			IdleTimeout:  cfg.HTTP.IdleTimeout,
 		},
 	}
+}
+
+// LoadKeyPair 从 cfg.Security 加载或生成 RSA keypair；失败则进程退出。
+func LoadKeyPair(cfg config.Config, logger *slog.Logger) *security.KeyPair {
+	kp, err := security.LoadOrGenerateKeyPair(cfg.Security.SignPrivateKey, cfg.Security.SignPublicKey)
+	if err != nil {
+		logger.Error("security keypair load failed", "error", err)
+		panic(err)
+	}
+	if cfg.Security.SignPrivateKey == "" {
+		logger.Warn("SIGN_PRIVATE_KEY not set, generated ephemeral RSA-2048 keypair (dev only)")
+	}
+	return kp
 }
 
 // Start 阻塞监听；返回值为非 nil 时表示监听异常。

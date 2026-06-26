@@ -48,5 +48,20 @@ func (g *RouterGroup) Handle(method, path string, h gin.HandlerFunc) {
 	g.group.Handle(method, path, h)
 }
 
+// Group 在本组下创建子路由组；返回新的 *RouterGroup（也是 feature.Router）。
+//
+// 行为完全转发给 gin.RouterGroup.Group：
+//   - 子组的最终前缀 = 本组前缀 + relativePath；
+//   - 子组会继承本组的中间件，再叠加本方法传入的 middlewares。
+//
+// 用法示例（router.go）：
+//
+//	v1 := NewRouterGroup(engine, "/api/v1")
+//	mobile := v1.Group("/mobile", ClientMarker("mobile"))
+//	// mobile 下的 Handle 注册的实际路径形如 /api/v1/mobile/xxx
+func (g *RouterGroup) Group(relativePath string, middlewares ...gin.HandlerFunc) feature.Router {
+	return &RouterGroup{group: g.group.Group(relativePath, middlewares...)}
+}
+
 // 编译期断言：RouterGroup 必须实现 feature.Router。
 var _ feature.Router = (*RouterGroup)(nil)

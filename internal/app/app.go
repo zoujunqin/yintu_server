@@ -46,9 +46,43 @@ func New(cfg config.Config, logger *slog.Logger, pg *db.Postgres) (*App, error) 
 }
 
 // Mount 把所有 feature 的路由注册到 router 上（router 由调用方提供，通常是 httpserver.RouterGroup）。
+//
+// 这是「公共路由」入口：不区分客户端，所有 feature 的 MountRoutes 都会挂到 router 上。
+// 若需要在 v1 下再分客户端子组（移动端 / 管理端 / 用户端），由调用方在 router.go
+// 用 router.Group(...) 创建子组后，再分别调用下面的 MountMobile / MountAdmin / MountPCUser。
 func (a *App) Mount(router feature.Router) {
 	for _, m := range a.modules {
 		m.MountRoutes(router)
+	}
+}
+
+// MountMobile 把所有实现了 feature.MobileProvider 的 feature 挂到 mobile 子组上。
+//
+// 没实现该接口的 feature 会被静默跳过 —— 这是设计意图：
+// 加新 feature 时默认不挂任何客户端子组，按需实现接口即可。
+func (a *App) MountMobile(router feature.Router) {
+	for _, m := range a.modules {
+		if p, ok := m.(feature.MobileProvider); ok {
+			p.MountMobileRoutes(router)
+		}
+	}
+}
+
+// MountAdmin 把所有实现了 feature.AdminProvider 的 feature 挂到 admin 子组上。
+func (a *App) MountAdmin(router feature.Router) {
+	for _, m := range a.modules {
+		if p, ok := m.(feature.AdminProvider); ok {
+			p.MountAdminRoutes(router)
+		}
+	}
+}
+
+// MountPCUser 把所有实现了 feature.PCUserProvider 的 feature 挂到 pc-user 子组上。
+func (a *App) MountPCUser(router feature.Router) {
+	for _, m := range a.modules {
+		if p, ok := m.(feature.PCUserProvider); ok {
+			p.MountPCUserRoutes(router)
+		}
 	}
 }
 

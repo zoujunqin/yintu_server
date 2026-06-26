@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"spring-slumber-server/internal/app/user/model"
+	"spring-slumber-server/internal/app/admin-user/model"
 )
 
 // ErrUserNotFound 用户不存在。

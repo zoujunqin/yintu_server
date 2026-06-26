@@ -5,8 +5,8 @@ import (
 
 	"gorm.io/gorm"
 
+	"spring-slumber-server/internal/app/admin-user"
 	"spring-slumber-server/internal/app/feature"
-	"spring-slumber-server/internal/app/user"
 	"spring-slumber-server/internal/auth"
 	"spring-slumber-server/internal/config"
 )

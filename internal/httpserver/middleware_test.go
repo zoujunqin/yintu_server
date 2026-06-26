@@ -162,3 +162,45 @@ func TestCORS_WildcardWithCredentials_ReflectsOrigin(t *testing.T) {
 		t.Fatalf("expected Allow-Credentials=true, got %q", got)
 	}
 }
+
+// TestRouterGroup_NestedPrefix 验证 RouterGroup.Group() 能正确拼接父 + 子前缀，
+// 并让子组的中间件（ClientMarker）正常生效。
+//
+// 这条用例是子组架构的端到端契约：
+//   - 父组前缀 /api/v1 + 子组前缀 /mobile = 实际路径 /api/v1/mobile/user/ping
+//   - 子组挂的 ClientMarker 中间件必须把 platform 写入 gin.Context
+//   - handler 能读到该标记
+func TestRouterGroup_NestedPrefix(t *testing.T) {
+	r := gin.New()
+	v1 := NewRouterGroup(r, APIPrefixV1)
+	mobile := v1.Group("/mobile", ClientMarker("mobile"))
+
+	mobile.Handle("GET", "/user/ping", func(c *gin.Context) {
+		platform := c.GetString(ClientPlatformKey)
+		c.JSON(http.StatusOK, gin.H{"platform": platform})
+	})
+
+	// 命中子组路径
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/mobile/user/ping", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for nested route, got %d, body=%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"mobile"`) {
+		t.Fatalf("expected platform=mobile in body, got %s", rec.Body.String())
+	}
+
+	// 父组单独路径不影响子组 —— 这是分组的核心契约
+	rec2 := httptest.NewRecorder()
+	r.ServeHTTP(rec2, httptest.NewRequest(http.MethodGet, "/api/v1/mobile/user/missing", nil))
+	if rec2.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for unknown nested path, got %d", rec2.Code)
+	}
+
+	// 父组的路径不在子组上 —— /api/v1/user/ping 没注册，应该 404
+	rec3 := httptest.NewRecorder()
+	r.ServeHTTP(rec3, httptest.NewRequest(http.MethodGet, "/api/v1/user/ping", nil))
+	if rec3.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 at parent (no /user/ping registered), got %d", rec3.Code)
+	}
+}

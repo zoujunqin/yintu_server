@@ -6,7 +6,7 @@ import (
 
 	"gorm.io/gorm"
 
-	"spring-slumber-server/internal/app/user/model"
+	"spring-slumber-server/internal/app/admin-user/model"
 )
 
 // VerificationCodeDAO 封装 verification_code 表的访问。

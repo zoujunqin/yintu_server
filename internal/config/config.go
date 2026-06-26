@@ -17,6 +17,18 @@ type Config struct {
 	JWT      JWTConfig
 	Auth     AuthConfig
 	SMS      SMSConfig
+	Security SecurityConfig
+}
+
+// SecurityConfig 接口加签 + 加解密配置。
+type SecurityConfig struct {
+	// SignPrivateKey 服务端 RSA 私钥（PEM，可选；缺省时启动自动生成，仅 dev）。
+	SignPrivateKey string
+	// SignPublicKey  服务端 RSA 公钥 SPKI base64（可选；缺省时从私钥推导）。
+	SignPublicKey string
+	// EncryptEnabled 响应是否走 AES-GCM 加密。true=production 默认，false=dev mock。
+	// 由后端决定；前端不读任何 env 变量。
+	EncryptEnabled bool
 }
 
 type AppConfig struct {
@@ -154,6 +166,13 @@ func Load() Config {
 			APISecret:  envString("SMS_API_SECRET", ""),
 			SignName:   envString("SMS_SIGN_NAME", ""),
 			TemplateID: envString("SMS_TEMPLATE_ID", ""),
+		},
+		Security: SecurityConfig{
+			SignPrivateKey: envString("SIGN_PRIVATE_KEY", ""),
+			SignPublicKey:  envString("SIGN_PUBLIC_KEY", ""),
+			// 默认 production 加密；dev 环境显式置 false 走明文（便于 mock 联调）。
+			//EncryptEnabled: envBool("SECURITY_ENCRYPT_ENABLED", env != "development"),
+			EncryptEnabled: true,
 		},
 	}
 }

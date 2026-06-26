@@ -1,6 +1,6 @@
 # Spring Slumber Server
 
-Go HTTP server providing REST API endpoints for the Spring Slumber application.
+* 每次编写代码时，需要**一层一层的分析代码关联**之后，再分析需求，然后对照需求哪个改动是最少代码最完美实现，减少幻觉。
 
 ## Tech Stack
 
@@ -75,3 +75,21 @@ Copy `.env.example` to `.env` and configure. Key variables:
 - `HTTP_LISTEN` — server address (default: `0.0.0.0:8080`)
 - `CORS_ORIGINS` — allowed origins (comma-separated)
 - `APP_ENV` — `development` | `production`
+
+## Reference Documentation
+
+Before touching any code in this repo, **consult the official API references** in `.claude/notes/` — they are the single source of truth for *how* each library is supposed to be used, sourced only from official docs (go.dev / pkg.go.dev / gin-gonic.com / gorm.io / official GitHub repos):
+
+| File | Topic | Read when… |
+|---|---|---|
+| `notes/go-stdlib.md` | Go 1.22+ stdlib (`net/http`, `context`, `log/slog`, `errors`, `sync/errgroup`) | working with servers, goroutines, logging, errors |
+| `notes/gin.md` | Gin v1.10+ routing, middleware, binding, validation | adding handlers, routes, middleware |
+| `notes/gorm-postgres.md` | GORM v2 + PostgreSQL (models, queries, transactions, hooks, error codes) | writing models / DAOs / migrations |
+| `notes/jwt.md` | golang-jwt/jwt v5 (issue / parse / refresh / revoke) | touching `internal/auth/*` |
+| `notes/swag-openapi.md` | swag annotations → OpenAPI doc.json | adding new API endpoints or running `make swag` |
+| `notes/README.md` | index + maintenance conventions | first read in any new session |
+
+Rules of engagement with these notes:
+- ✅ Treat them as canonical — match project code to the patterns they describe, not the other way around.
+- ✅ When proposing a code change that uses an API listed in a note, cite the relevant section.
+- ❌ Do not invent patterns not covered by the notes — if you need something new, either extend the note (with an official source) or ask first.

@@ -44,5 +44,13 @@ test: ## 跑单测
 tidy: ## go mod tidy
 	go mod tidy
 
+keygen: ## 生成 RSA-2048 keypair 并追加到 .env（用 -e 指定其他文件）
+	@go run ./cmd/keygen -out .env
+	@echo "tip: 把 SIGN_PUBLIC_KEY 同步到前端 NEXT_PUBLIC_RSA_PUBLIC_KEY"
+
+keygen-prod: ## 生成 RSA-2048 keypair 到 .env.production
+	@go run ./cmd/keygen -out .env.production -bits 2048
+	@echo "tip: 把 SIGN_PUBLIC_KEY 同步到前端 NEXT_PUBLIC_RSA_PUBLIC_KEY"
+
 clean: ## 删除构建产物
 	rm -rf bin
